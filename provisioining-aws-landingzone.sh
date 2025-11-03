@@ -62,10 +62,10 @@ log() {
 
 print_banner() {
     echo -e "${BLUE}"
-    cat << "EOF"
+    cat << EOF
 ╔════════════════════════════════════════════════════════════════╗
 ║                                                                ║
-║        AWS Landing Zone Provisioning Script v1.0.0            ║
+║        AWS Landing Zone Provisioning Script v${SCRIPT_VERSION}             ║
 ║                                                                ║
 ║  Creating foundational multi-account AWS environment with:     ║
 ║    • AWS Organizations                                         ║

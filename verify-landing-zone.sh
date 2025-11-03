@@ -30,10 +30,10 @@ CHECKS_WARNING=0
 
 print_header() {
     echo -e "${BLUE}"
-    cat << "EOF"
+    cat << EOF
 ╔════════════════════════════════════════════════════════════════╗
 ║                                                                ║
-║        AWS Landing Zone Verification Script v1.0.0            ║
+║        AWS Landing Zone Verification Script v${SCRIPT_VERSION}            ║
 ║                                                                ║
 ╚════════════════════════════════════════════════════════════════╝
 EOF
