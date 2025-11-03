@@ -286,16 +286,16 @@ aws sts assume-role \
 │ Post-Deployment Automation Timeline             │
 ├─────────────────────────────────────────────────┤
 │                                                 │
-│ Step 1: MFA Guide           [Manual - 10 min]  │
-│ Step 2: IAM Identity Center [Automated - 1 min]│
-│ Step 3: AWS Config          [Automated - 5 min]│
-│ Step 4: Security Hub        [Automated - 3 min]│
-│ Step 5: GuardDuty           [Automated - 3 min]│
-│ Step 6: Workload Accounts   [Optional - 10 min]│
-│ Step 7: Custom SCPs         [Automated - 1 min]│
-│ Step 8: Cross-Account Roles [Automated - 3 min]│
-│ Step 9: AWS Backup          [Automated - 2 min]│
-│ Step 10: Tagging Strategy   [Automated - 1 min]│
+│ Step 1: MFA Guide           [Manual - 10 min]   │
+│ Step 2: IAM Identity Center [Automated - 1 min] │
+│ Step 3: AWS Config          [Automated - 5 min] │
+│ Step 4: Security Hub        [Automated - 3 min] │
+│ Step 5: GuardDuty           [Automated - 3 min] │
+│ Step 6: Workload Accounts   [Optional - 10 min] │
+│ Step 7: Custom SCPs         [Automated - 1 min] │
+│ Step 8: Cross-Account Roles [Automated - 3 min] │
+│ Step 9: AWS Backup          [Automated - 2 min] │
+│ Step 10: Tagging Strategy   [Automated - 1 min] │
 │                                                 │
 │ Total Automated Time: ~15-20 minutes            │
 │ Total Manual Time: ~10-15 minutes               │
