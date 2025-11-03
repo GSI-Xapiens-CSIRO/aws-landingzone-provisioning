@@ -81,7 +81,7 @@ The script must be run from an AWS account with the following permissions:
 
 1. **Download the script:**
 ```bash
-curl -O https://your-repo/provision-aws-landing-zone.sh
+curl -O https://raw.githubusercontent.com/GSI-Xapiens-CSIRO/aws-landingzone-provisioning/refs/heads/develop/provisioining-aws-landingzone.sh
 chmod +x provision-aws-landing-zone.sh
 ```
 
