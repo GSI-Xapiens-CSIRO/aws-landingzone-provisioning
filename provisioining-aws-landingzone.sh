@@ -27,12 +27,12 @@ NC='\033[0m' # No Color
 # Configuration
 SCRIPT_VERSION="1.0.0"
 LOG_FILE="landing-zone-provisioning-$(date +%Y%m%d_%H%M%S).log"
-ORG_NAME="${ORG_NAME:-MyOrganization}"
+ORG_NAME="${ORG_NAME}"
 AWS_REGION="${AWS_REGION:-ap-southeast-3}"
 
 # Email addresses for account root users (MUST BE UNIQUE)
-LOG_ARCHIVE_EMAIL="${LOG_ARCHIVE_EMAIL:-aws-log-archive@example.com}"
-SECURITY_AUDIT_EMAIL="${SECURITY_AUDIT_EMAIL:-aws-security-audit@example.com}"
+LOG_ARCHIVE_EMAIL="${LOG_ARCHIVE_EMAIL}"
+SECURITY_AUDIT_EMAIL="${SECURITY_AUDIT_EMAIL}"
 
 ################################################################################
 # Logging Functions
