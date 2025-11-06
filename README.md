@@ -63,6 +63,7 @@ AWS Organization (Root)
 - **AWS CLI** version 2.x or later
 - **jq** (JSON processor)
 - **bash** version 4.x or later
+- **Tmux** version 3.1 or later
 
 ### AWS Permissions
 The script must be run from an AWS account with the following permissions:
