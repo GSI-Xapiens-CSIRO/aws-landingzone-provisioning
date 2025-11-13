@@ -134,10 +134,15 @@ assume_role() {
 
     log INFO "Assuming role in account $account_id..."
 
-    local credentials=$(aws sts assume-role \
+    local credentials
+    if ! credentials=$(aws sts assume-role \
         --role-arn "arn:aws:iam::${account_id}:role/${role_name}" \
         --role-session-name "post-deployment-automation" \
-        --output json)
+        --output json 2>&1); then
+        log ERROR "Failed to assume role in account $account_id"
+        log ERROR "$credentials"
+        return 1
+    fi
 
     export AWS_ACCESS_KEY_ID=$(echo $credentials | jq -r '.Credentials.AccessKeyId')
     export AWS_SECRET_ACCESS_KEY=$(echo $credentials | jq -r '.Credentials.SecretAccessKey')
