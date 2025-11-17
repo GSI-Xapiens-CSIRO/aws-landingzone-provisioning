@@ -462,13 +462,13 @@ create_hub_accounts() {
         --query "OrganizationalUnits[?Name=='Hub'].Id" \
         --output text)
 
-    # Define hub accounts
+    # Define hub accounts from .env
     declare -A hub_accounts=(
-        ["RSCM"]="${AWS_PROFILE_HUB01_EMAIL}"
-        ["RSPON"]="${AWS_PROFILE_HUB02_EMAIL}"
-        ["SARDJITO"]="${AWS_PROFILE_HUB03_EMAIL}"
-        ["RSNGOERAH"]="${AWS_PROFILE_HUB04_EMAIL}"
-        ["RSJPD"]="${AWS_PROFILE_HUB05_EMAIL}"
+        ["${WORKLOAD_HUB01_NAME}"]="${WORKLOAD_HUB01_EMAIL}"
+        ["${WORKLOAD_HUB02_NAME}"]="${WORKLOAD_HUB02_EMAIL}"
+        ["${WORKLOAD_HUB03_NAME}"]="${WORKLOAD_HUB03_EMAIL}"
+        ["${WORKLOAD_HUB04_NAME}"]="${WORKLOAD_HUB04_EMAIL}"
+        ["${WORKLOAD_HUB05_NAME}"]="${WORKLOAD_HUB05_EMAIL}"
     )
 
     for account_name in "${!hub_accounts[@]}"; do
@@ -543,13 +543,13 @@ create_uat_accounts() {
         --query "OrganizationalUnits[?Name=='UAT'].Id" \
         --output text)
 
-    # Define UAT accounts
+    # Define UAT accounts from .env
     declare -A uat_accounts=(
-        ["RSCM-UAT"]="${AWS_PROFILE_UAT01_EMAIL}"
-        ["RSPON-UAT"]="${AWS_PROFILE_UAT02_EMAIL}"
-        ["SARDJITO-UAT"]="${AWS_PROFILE_UAT03_EMAIL}"
-        ["RSNGOERAH-UAT"]="${AWS_PROFILE_UAT04_EMAIL}"
-        ["RSJPD-UAT"]="${AWS_PROFILE_UAT05_EMAIL}"
+        ["${WORKLOAD_UAT01_NAME}"]="${WORKLOAD_UAT01_EMAIL}"
+        ["${WORKLOAD_UAT02_NAME}"]="${WORKLOAD_UAT02_EMAIL}"
+        ["${WORKLOAD_UAT03_NAME}"]="${WORKLOAD_UAT03_EMAIL}"
+        ["${WORKLOAD_UAT04_NAME}"]="${WORKLOAD_UAT04_EMAIL}"
+        ["${WORKLOAD_UAT05_NAME}"]="${WORKLOAD_UAT05_EMAIL}"
     )
 
     for account_name in "${!uat_accounts[@]}"; do

@@ -157,8 +157,7 @@ assume_role() {
         --role-arn "arn:aws:iam::${account_id}:role/${role_name}" \
         --role-session-name "post-deployment-automation" \
         --output json 2>&1); then
-        log ERROR "Failed to assume role in account $account_id"
-        log ERROR "$credentials"
+        log WARN "Cannot assume role in account $account_id - skipping cross-account operations"
         return 1
     fi
 
@@ -402,7 +401,10 @@ enable_aws_config() {
         if [[ "$account_id" == "$LOG_ARCHIVE_ACCOUNT_ID" ]]; then
             local config_bucket="aws-config-logs-${LOG_ARCHIVE_ACCOUNT_ID}"
 
-            assume_role "$LOG_ARCHIVE_ACCOUNT_ID"
+            if ! assume_role "$LOG_ARCHIVE_ACCOUNT_ID"; then
+                log WARN "Skipping Config bucket creation in Log Archive account"
+                continue
+            fi
 
             # Create bucket
             aws s3 mb "s3://${config_bucket}" --region $AWS_REGION 2>/dev/null || log WARN "Config bucket may already exist"
@@ -431,7 +433,10 @@ enable_aws_config() {
 
         # Enable Config in each account
         if [[ "$account_id" != "$MANAGEMENT_ACCOUNT_ID" ]]; then
-            assume_role "$account_id"
+            if ! assume_role "$account_id"; then
+                log WARN "Skipping Config setup in account $account_id"
+                continue
+            fi
         fi
 
         # Create IAM role for Config
@@ -499,7 +504,10 @@ setup_security_hub() {
     log STEP "Setting up Security Hub..."
 
     # Enable in Security/Audit account
-    assume_role "$SECURITY_AUDIT_ACCOUNT_ID"
+    if ! assume_role "$SECURITY_AUDIT_ACCOUNT_ID"; then
+        log WARN "Cannot configure Security Hub - skipping"
+        return 0
+    fi
 
     log INFO "Enabling Security Hub in Security/Audit account..."
 
@@ -524,7 +532,10 @@ setup_security_hub() {
     log SUCCESS "Security Hub delegated administrator configured"
 
     # Enable member accounts
-    assume_role "$SECURITY_AUDIT_ACCOUNT_ID"
+    if ! assume_role "$SECURITY_AUDIT_ACCOUNT_ID"; then
+        log WARN "Cannot add member accounts to Security Hub"
+        return 0
+    fi
 
     log INFO "Adding member accounts to Security Hub..."
 
@@ -550,7 +561,10 @@ setup_guardduty() {
     log STEP "Setting up GuardDuty..."
 
     # Enable in Security/Audit account
-    assume_role "$SECURITY_AUDIT_ACCOUNT_ID"
+    if ! assume_role "$SECURITY_AUDIT_ACCOUNT_ID"; then
+        log WARN "Cannot configure GuardDuty - skipping"
+        return 0
+    fi
 
     log INFO "Enabling GuardDuty in Security/Audit account..."
 
@@ -582,7 +596,10 @@ setup_guardduty() {
     log SUCCESS "GuardDuty delegated administrator configured"
 
     # Auto-enable for new accounts
-    assume_role "$SECURITY_AUDIT_ACCOUNT_ID"
+    if ! assume_role "$SECURITY_AUDIT_ACCOUNT_ID"; then
+        log WARN "Cannot configure GuardDuty auto-enable"
+        return 0
+    fi
 
     aws guardduty update-organization-configuration \
         --detector-id "$detector_id" \
@@ -601,118 +618,74 @@ setup_guardduty() {
 create_workload_accounts() {
     print_section "Step 6: Workload Account Creation"
 
-    log STEP "Creating workload accounts..."
+    log STEP "Creating workload accounts from .env configuration..."
 
-    echo ""
-    log INFO "This will create the following accounts:"
-    log INFO "  - Development Account (dev-workload@example.com)"
-    log INFO "  - Production Account (prod-workload@example.com)"
-    echo ""
+    local root_id=$(aws organizations list-roots --query 'Roots[0].Id' --output text)
+    local workloads_ou=$(aws organizations list-organizational-units-for-parent \
+        --parent-id "$root_id" \
+        --query "OrganizationalUnits[?Name=='Workloads'].Id" \
+        --output text)
 
-    read -p "Do you want to create workload accounts? (yes/no): " create_workloads
-
-    if [[ "$create_workloads" != "yes" ]]; then
-        log WARN "Skipping workload account creation"
+    if [[ -z "$workloads_ou" ]]; then
+        log WARN "Workloads OU not found, skipping workload account creation"
         return 0
     fi
 
-    read -p "Enter email for Development account: " dev_email
-    read -p "Enter email for Production account: " prod_email
-
-    # Create Development account
-    log INFO "Creating Development account..."
-
-    local dev_request=$(aws organizations create-account \
-        --email "$dev_email" \
-        --account-name "Development" \
-        --output json)
-
-    local dev_request_id=$(echo $dev_request | jq -r '.CreateAccountStatus.Id')
-
-    # Create Production account
-    log INFO "Creating Production account..."
-
-    local prod_request=$(aws organizations create-account \
-        --email "$prod_email" \
-        --account-name "Production" \
-        --output json)
-
-    local prod_request_id=$(echo $prod_request | jq -r '.CreateAccountStatus.Id')
-
-    log INFO "Waiting for account creation (this may take 5-10 minutes)..."
-
-    # Wait for Development account
-    local dev_account_id=""
-    for i in {1..60}; do
-        sleep 10
-        local status=$(aws organizations describe-create-account-status \
-            --create-account-request-id "$dev_request_id" \
-            --query 'CreateAccountStatus.State' \
-            --output text)
-
-        if [[ "$status" == "SUCCEEDED" ]]; then
-            dev_account_id=$(aws organizations describe-create-account-status \
-                --create-account-request-id "$dev_request_id" \
-                --query 'CreateAccountStatus.AccountId' \
-                --output text)
-            log SUCCESS "Development account created: $dev_account_id"
-            break
-        elif [[ "$status" == "FAILED" ]]; then
-            log ERROR "Development account creation failed"
-            break
-        fi
+    # Hub accounts
+    for i in {1..5}; do
+        local name_var="AWS_PROFILE_HUB0${i}"
+        local email_var="AWS_PROFILE_HUB0${i}_EMAIL"
+        local account_name="${!name_var}"
+        local email="${!email_var}"
+        
+        [[ -z "$email" ]] && continue
+        
+        local existing=$(aws organizations list-accounts --query "Accounts[?Name=='$account_name'].Id" --output text)
+        [[ -n "$existing" ]] && { log WARN "$account_name already exists: $existing"; continue; }
+        
+        log INFO "Creating $account_name..."
+        local request=$(aws organizations create-account --email "$email" --account-name "$account_name" --output json)
+        local request_id=$(echo $request | jq -r '.CreateAccountStatus.Id')
+        
+        local account_id=""
+        for j in {1..60}; do
+            sleep 10
+            local status=$(aws organizations describe-create-account-status --create-account-request-id "$request_id" --query 'CreateAccountStatus.State' --output text)
+            [[ "$status" == "SUCCEEDED" ]] && { account_id=$(aws organizations describe-create-account-status --create-account-request-id "$request_id" --query 'CreateAccountStatus.AccountId' --output text); log SUCCESS "$account_name created: $account_id"; break; }
+            [[ "$status" == "FAILED" ]] && { log ERROR "$account_name creation failed"; break; }
+        done
+        
+        [[ -n "$account_id" ]] && aws organizations move-account --account-id "$account_id" --source-parent-id "$root_id" --destination-parent-id "$workloads_ou" 2>/dev/null && log SUCCESS "$account_name moved to Workloads OU"
     done
 
-    # Wait for Production account
-    local prod_account_id=""
-    for i in {1..60}; do
-        sleep 10
-        local status=$(aws organizations describe-create-account-status \
-            --create-account-request-id "$prod_request_id" \
-            --query 'CreateAccountStatus.State' \
-            --output text)
-
-        if [[ "$status" == "SUCCEEDED" ]]; then
-            prod_account_id=$(aws organizations describe-create-account-status \
-                --create-account-request-id "$prod_request_id" \
-                --query 'CreateAccountStatus.AccountId' \
-                --output text)
-            log SUCCESS "Production account created: $prod_account_id"
-            break
-        elif [[ "$status" == "FAILED" ]]; then
-            log ERROR "Production account creation failed"
-            break
-        fi
+    # UAT accounts
+    for i in {1..5}; do
+        local name_var="AWS_PROFILE_UAT0${i}"
+        local email_var="AWS_PROFILE_UAT0${i}_EMAIL"
+        local account_name="${!name_var}"
+        local email="${!email_var}"
+        
+        [[ -z "$email" ]] && continue
+        
+        local existing=$(aws organizations list-accounts --query "Accounts[?Name=='$account_name'].Id" --output text)
+        [[ -n "$existing" ]] && { log WARN "$account_name already exists: $existing"; continue; }
+        
+        log INFO "Creating $account_name..."
+        local request=$(aws organizations create-account --email "$email" --account-name "$account_name" --output json)
+        local request_id=$(echo $request | jq -r '.CreateAccountStatus.Id')
+        
+        local account_id=""
+        for j in {1..60}; do
+            sleep 10
+            local status=$(aws organizations describe-create-account-status --create-account-request-id "$request_id" --query 'CreateAccountStatus.State' --output text)
+            [[ "$status" == "SUCCEEDED" ]] && { account_id=$(aws organizations describe-create-account-status --create-account-request-id "$request_id" --query 'CreateAccountStatus.AccountId' --output text); log SUCCESS "$account_name created: $account_id"; break; }
+            [[ "$status" == "FAILED" ]] && { log ERROR "$account_name creation failed"; break; }
+        done
+        
+        [[ -n "$account_id" ]] && aws organizations move-account --account-id "$account_id" --source-parent-id "$root_id" --destination-parent-id "$workloads_ou" 2>/dev/null && log SUCCESS "$account_name moved to Workloads OU"
     done
 
-    # Move accounts to Workloads OU
-    if [[ -n "$dev_account_id" ]] || [[ -n "$prod_account_id" ]]; then
-        local root_id=$(aws organizations list-roots --query 'Roots[0].Id' --output text)
-        local workloads_ou=$(aws organizations list-organizational-units-for-parent \
-            --parent-id "$root_id" \
-            --query "OrganizationalUnits[?Name=='Workloads'].Id" \
-            --output text)
-
-        if [[ -n "$workloads_ou" ]]; then
-            if [[ -n "$dev_account_id" ]]; then
-                aws organizations move-account \
-                    --account-id "$dev_account_id" \
-                    --source-parent-id "$root_id" \
-                    --destination-parent-id "$workloads_ou" 2>/dev/null || true
-                log SUCCESS "Development account moved to Workloads OU"
-            fi
-
-            if [[ -n "$prod_account_id" ]]; then
-                aws organizations move-account \
-                    --account-id "$prod_account_id" \
-                    --source-parent-id "$root_id" \
-                    --destination-parent-id "$workloads_ou" 2>/dev/null || true
-                log SUCCESS "Production account moved to Workloads OU"
-            fi
-        fi
-    fi
-
-    log SUCCESS "Workload accounts created successfully"
+    log SUCCESS "Workload accounts creation completed"
 }
 
 ################################################################################
