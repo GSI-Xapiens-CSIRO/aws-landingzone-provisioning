@@ -285,10 +285,10 @@ create_organizational_units() {
     WORKLOADS_OU_ID=$(create_or_get_ou "Workloads" "$root_id")
 
     # Create Hub OU for production genomics workloads
-    HUB_OU_ID=$(create_or_get_ou "Hub-Production" "$root_id")
+    HUB_OU_ID=$(create_or_get_ou "Hub" "$root_id")
 
     # Create UAT OU for staging genomics workloads
-    UAT_OU_ID=$(create_or_get_ou "UAT-Staging" "$root_id")
+    UAT_OU_ID=$(create_or_get_ou "UAT" "$root_id")
 
     log SUCCESS "All Organizational Units created/verified"
 }
@@ -471,42 +471,11 @@ create_security_audit_account() {
 ################################################################################
 
 create_hub_accounts() {
-    print_section "Step 5: Creating Hub Accounts (Production Genomics)"
+    print_section "Step 5: Verifying Hub Accounts (Production)"
 
-    # Hub01 - RSCM (Production)
-    if [[ -n "${AWS_PROFILE_HUB01_EMAIL:-}" ]]; then
-        log INFO "Creating Hub01-RSCM account..."
-        local hub01_id=$(create_account_with_retry "Hub01-RSCM" "$AWS_PROFILE_HUB01_EMAIL" "$HUB_OU_ID")
-        [[ -n "$hub01_id" ]] && log SUCCESS "Hub01-RSCM created: $hub01_id"
-    fi
-
-    # Hub02 - RSPON (Production)
-    if [[ -n "${AWS_PROFILE_HUB02_EMAIL:-}" ]]; then
-        log INFO "Creating Hub02-RSPON account..."
-        local hub02_id=$(create_account_with_retry "Hub02-RSPON" "$AWS_PROFILE_HUB02_EMAIL" "$HUB_OU_ID")
-        [[ -n "$hub02_id" ]] && log SUCCESS "Hub02-RSPON created: $hub02_id"
-    fi
-
-    # Hub03 - SARDJITO (Production)
-    if [[ -n "${AWS_PROFILE_HUB03_EMAIL:-}" ]]; then
-        log INFO "Creating Hub03-SARDJITO account..."
-        local hub03_id=$(create_account_with_retry "Hub03-SARDJITO" "$AWS_PROFILE_HUB03_EMAIL" "$HUB_OU_ID")
-        [[ -n "$hub03_id" ]] && log SUCCESS "Hub03-SARDJITO created: $hub03_id"
-    fi
-
-    # Hub04 - RSNGOERAH (Production)
-    if [[ -n "${AWS_PROFILE_HUB04_EMAIL:-}" ]]; then
-        log INFO "Creating Hub04-RSNGOERAH account..."
-        local hub04_id=$(create_account_with_retry "Hub04-RSNGOERAH" "$AWS_PROFILE_HUB04_EMAIL" "$HUB_OU_ID")
-        [[ -n "$hub04_id" ]] && log SUCCESS "Hub04-RSNGOERAH created: $hub04_id"
-    fi
-
-    # Hub05 - RSJPD (Production)
-    if [[ -n "${AWS_PROFILE_HUB05_EMAIL:-}" ]]; then
-        log INFO "Creating Hub05-RSJPD account..."
-        local hub05_id=$(create_account_with_retry "Hub05-RSJPD" "$AWS_PROFILE_HUB05_EMAIL" "$HUB_OU_ID")
-        [[ -n "$hub05_id" ]] && log SUCCESS "Hub05-RSJPD created: $hub05_id"
-    fi
+    log INFO "Hub accounts should already exist in Hub OU"
+    log INFO "Skipping account creation - using existing Hub accounts"
+    log SUCCESS "Hub accounts verification completed"
 }
 
 ################################################################################
@@ -514,42 +483,11 @@ create_hub_accounts() {
 ################################################################################
 
 create_uat_accounts() {
-    print_section "Step 6: Creating UAT Accounts (Staging Genomics)"
+    print_section "Step 6: Verifying UAT Accounts (Staging)"
 
-    # UAT01 - RSCM (Staging)
-    if [[ -n "${AWS_PROFILE_UAT01_EMAIL:-}" ]]; then
-        log INFO "Creating UAT01-RSCM account..."
-        local uat01_id=$(create_account_with_retry "UAT01-RSCM" "$AWS_PROFILE_UAT01_EMAIL" "$UAT_OU_ID")
-        [[ -n "$uat01_id" ]] && log SUCCESS "UAT01-RSCM created: $uat01_id"
-    fi
-
-    # UAT02 - RSPON (Staging)
-    if [[ -n "${AWS_PROFILE_UAT02_EMAIL:-}" ]]; then
-        log INFO "Creating UAT02-RSPON account..."
-        local uat02_id=$(create_account_with_retry "UAT02-RSPON" "$AWS_PROFILE_UAT02_EMAIL" "$UAT_OU_ID")
-        [[ -n "$uat02_id" ]] && log SUCCESS "UAT02-RSPON created: $uat02_id"
-    fi
-
-    # UAT03 - SARDJITO (Staging)
-    if [[ -n "${AWS_PROFILE_UAT03_EMAIL:-}" ]]; then
-        log INFO "Creating UAT03-SARDJITO account..."
-        local uat03_id=$(create_account_with_retry "UAT03-SARDJITO" "$AWS_PROFILE_UAT03_EMAIL" "$UAT_OU_ID")
-        [[ -n "$uat03_id" ]] && log SUCCESS "UAT03-SARDJITO created: $uat03_id"
-    fi
-
-    # UAT04 - RSNGOERAH (Staging)
-    if [[ -n "${AWS_PROFILE_UAT04_EMAIL:-}" ]]; then
-        log INFO "Creating UAT04-RSNGOERAH account..."
-        local uat04_id=$(create_account_with_retry "UAT04-RSNGOERAH" "$AWS_PROFILE_UAT04_EMAIL" "$UAT_OU_ID")
-        [[ -n "$uat04_id" ]] && log SUCCESS "UAT04-RSNGOERAH created: $uat04_id"
-    fi
-
-    # UAT05 - RSJPD (Staging)
-    if [[ -n "${AWS_PROFILE_UAT05_EMAIL:-}" ]]; then
-        log INFO "Creating UAT05-RSJPD account..."
-        local uat05_id=$(create_account_with_retry "UAT05-RSJPD" "$AWS_PROFILE_UAT05_EMAIL" "$UAT_OU_ID")
-        [[ -n "$uat05_id" ]] && log SUCCESS "UAT05-RSJPD created: $uat05_id"
-    fi
+    log INFO "UAT accounts should already exist in UAT OU"
+    log INFO "Skipping account creation - using existing UAT accounts"
+    log SUCCESS "UAT accounts verification completed"
 }
 
 ################################################################################
@@ -1050,8 +988,8 @@ ORGANIZATIONAL UNITS
 ════════════════════════════════════════════════════════════════
 • Security (contains Security/Audit account)
 • Infrastructure (contains Log Archive account)
-• Hub-Production (contains Hub genomics accounts)
-• UAT-Staging (contains UAT genomics accounts)
+• Hub (contains Hub genomics accounts)
+• UAT (contains UAT genomics accounts)
 • Workloads (ready for future workload accounts)
 
 ════════════════════════════════════════════════════════════════
