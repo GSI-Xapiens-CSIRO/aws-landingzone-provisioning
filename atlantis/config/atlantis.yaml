@@ -1,0 +1,131 @@
+version: 3
+
+automerge: true
+autodiscover:
+  mode: auto
+delete_source_branch_on_merge: true
+parallel_plan: true
+parallel_apply: true
+abort_on_execution_order_fail: true
+
+projects:
+- name: bgsi-main
+  branch: /main/
+  dir: .
+  workspace: default
+  terraform_version: &tf_version v1.9.4
+  execution_order_group: 1
+  autoplan:
+    when_modified: &tf_files
+      - "../modules/**/*.tf"
+      - ".terraform.lock.hcl"
+      - "*.json"
+      - "*.yaml"
+      - "*.js"
+      - "*.tf"
+      - "*.tfvars"
+      - "*.hcl"
+    enabled: true
+  plan_requirements: [approved]
+  apply_requirements: [approved]
+  workflow: rscm-workflow
+
+- name: bgsi-rscm
+  branch: /rscm/
+  dir: .
+  workspace: default
+  terraform_version: *tf_version
+  execution_order_group: 2
+  autoplan:
+    when_modified: *tf_files
+  workflow: rscm-workflow
+
+- name: bgsi-rspon
+  branch: /rspon/
+  dir: .
+  workspace: default
+  terraform_version: *tf_version
+  execution_order_group: 3
+  autoplan:
+    when_modified: *tf_files
+  workflow: rspon-workflow
+
+- name: bgsi-sardjito
+  branch: /sardjito/
+  dir: .
+  workspace: default
+  terraform_version: *tf_version
+  execution_order_group: 4
+  autoplan:
+    when_modified: *tf_files
+  workflow: sardjito-workflow
+
+- name: bgsi-igng
+  branch: /igng/
+  dir: .
+  workspace: default
+  terraform_version: *tf_version
+  execution_order_group: 5
+  autoplan:
+    when_modified: *tf_files
+  workflow: igng-workflow
+
+- name: bgsi-rsjpd
+  branch: /rsjpd/
+  dir: .
+  workspace: default
+  terraform_version: *tf_version
+  execution_order_group: 6
+  autoplan:
+    when_modified: *tf_files
+  workflow: rsjpd-workflow
+
+- name: bgsi-rscm-uat
+  branch: /rscm-uat/
+  dir: .
+  workspace: default
+  terraform_version: *tf_version
+  execution_order_group: 7
+  autoplan:
+    when_modified: *tf_files
+  workflow: rscm-uat-workflow
+
+- name: bgsi-rspon-uat
+  branch: /rspon-uat/
+  dir: .
+  workspace: default
+  terraform_version: *tf_version
+  execution_order_group: 8
+  autoplan:
+    when_modified: *tf_files
+  workflow: rspon-uat-workflow
+
+- name: bgsi-sardjito-uat
+  branch: /sardjito-uat/
+  dir: .
+  workspace: default
+  terraform_version: *tf_version
+  execution_order_group: 9
+  autoplan:
+    when_modified: *tf_files
+  workflow: sardjito-uat-workflow
+
+- name: bgsi-igng-uat
+  branch: /igng-uat/
+  dir: .
+  workspace: default
+  terraform_version: *tf_version
+  execution_order_group: 10
+  autoplan:
+    when_modified: *tf_files
+  workflow: igng-uat-workflow
+
+- name: bgsi-rsjpd-uat
+  branch: /rsjpd-uat/
+  dir: .
+  workspace: default
+  terraform_version: *tf_version
+  execution_order_group: 11
+  autoplan:
+    when_modified: *tf_files
+  workflow: rsjpd-uat-workflow

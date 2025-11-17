@@ -23,6 +23,14 @@
 
 # set -euo pipefail
 
+# Load environment variables from .env file
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    set -a
+    source "$SCRIPT_DIR/.env"
+    set +a
+fi
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -32,7 +40,7 @@ CYAN='\033[0;36m'
 MAGENTA='\033[0;35m'
 NC='\033[0m'
 
-SCRIPT_VERSION="1.0.0"
+SCRIPT_VERSION="2.0.0"
 LOG_FILE="post-deployment-automation-$(date +%Y%m%d_%H%M%S).log"
 AWS_REGION="${AWS_REGION:-ap-southeast-3}"
 

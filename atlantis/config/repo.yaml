@@ -1,0 +1,101 @@
+# Repository configurations
+repos:
+- id: github.com/bgsi-id/satusehat-research
+  branch: /.*/
+  apply_requirements: [approved, mergeable]
+  allowed_overrides: [workflow, plan_requirements, apply_requirements]
+  allow_custom_workflows: true
+  delete_source_branch_on_merge: true
+  workflow: dynamic-workflow
+
+workflows:
+  dynamic-workflow:
+    plan:
+      steps:
+      - run: atlantis-deploy rscm plan
+    apply:
+      steps:
+      - run: atlantis-deploy rscm apply
+
+  # HUB Workflows
+  rscm-workflow:
+    plan:
+      steps:
+      - run: atlantis-deploy rscm plan
+    apply:
+      steps:
+      - run: atlantis-deploy rscm apply
+
+  rspon-workflow:
+    plan:
+      steps:
+      - run: atlantis-deploy rspon plan
+    apply:
+      steps:
+      - run: atlantis-deploy rspon apply
+
+  sardjito-workflow:
+    plan:
+      steps:
+      - run: atlantis-deploy sardjito plan
+    apply:
+      steps:
+      - run: atlantis-deploy sardjito apply
+
+  igng-workflow:
+    plan:
+      steps:
+      - run: atlantis-deploy igng plan
+    apply:
+      steps:
+      - run: atlantis-deploy igng apply
+
+  rsjpd-workflow:
+    plan:
+      steps:
+      - run: atlantis-deploy rsjpd plan
+    apply:
+      steps:
+      - run: atlantis-deploy rsjpd apply
+
+
+  # UAT Workflows
+  rscm-uat-workflow:
+    plan:
+      steps:
+      - run: atlantis-deploy rscm-uat plan
+    apply:
+      steps:
+      - run: atlantis-deploy rscm-uat apply
+
+  rspon-uat-workflow:
+    plan:
+      steps:
+      - run: atlantis-deploy rspon-uat plan
+    apply:
+      steps:
+      - run: atlantis-deploy rspon-uat apply
+
+  sardjito-uat-workflow:
+    plan:
+      steps:
+      - run: atlantis-deploy sardjito-uat plan
+    apply:
+      steps:
+      - run: atlantis-deploy sardjito-uat apply
+
+  igng-uat-workflow:
+    plan:
+      steps:
+      - run: atlantis-deploy igng-uat plan
+    apply:
+      steps:
+      - run: atlantis-deploy igng-uat apply
+
+  rsjpd-uat-workflow:
+    plan:
+      steps:
+      - run: atlantis-deploy rsjpd-uat plan
+    apply:
+      steps:
+      - run: atlantis-deploy rsjpd-uat apply

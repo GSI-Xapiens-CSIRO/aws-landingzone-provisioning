@@ -17,6 +17,14 @@
 
 # set -euo pipefail
 
+# Load environment variables from .env file
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    set -a
+    source "$SCRIPT_DIR/.env"
+    set +a
+fi
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -25,7 +33,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-SCRIPT_VERSION="1.0.0"
+SCRIPT_VERSION="2.0.0"
 LOG_FILE="landing-zone-provisioning-$(date +%Y%m%d_%H%M%S).log"
 ORG_NAME="$ORG_NAME"
 AWS_REGION="${AWS_REGION:-ap-southeast-3}"
@@ -229,6 +237,36 @@ create_organizational_units() {
         log INFO "✓ Workloads OU created/exists"
     fi
 
+    # Create Hub OU
+    log INFO "Creating Hub OU..."
+    local hub_ou=$(aws organizations create-organizational-unit \
+        --parent-id "$root_id" \
+        --name "Hub" \
+        --output json 2>/dev/null || \
+        aws organizations list-organizational-units-for-parent \
+        --parent-id "$root_id" \
+        --query "OrganizationalUnits[?Name=='Hub'].Id" \
+        --output text)
+
+    if [[ -n "$hub_ou" ]]; then
+        log INFO "✓ Hub OU created/exists"
+    fi
+
+    # Create UAT OU
+    log INFO "Creating UAT OU..."
+    local uat_ou=$(aws organizations create-organizational-unit \
+        --parent-id "$root_id" \
+        --name "UAT" \
+        --output json 2>/dev/null || \
+        aws organizations list-organizational-units-for-parent \
+        --parent-id "$root_id" \
+        --query "OrganizationalUnits[?Name=='UAT'].Id" \
+        --output text)
+
+    if [[ -n "$uat_ou" ]]; then
+        log INFO "✓ UAT OU created/exists"
+    fi
+
     log INFO "✓ Organizational Units structure created"
 }
 
@@ -403,11 +441,177 @@ create_security_audit_account() {
 }
 
 ################################################################################
+# Hub and UAT Accounts Creation
+################################################################################
+
+create_hub_accounts() {
+    log INFO "Step 5: Creating Hub Accounts..."
+
+    local root_id=$(get_root_id)
+    local hub_ou=$(aws organizations list-organizational-units-for-parent \
+        --parent-id "$root_id" \
+        --query "OrganizationalUnits[?Name=='Hub'].Id" \
+        --output text)
+
+    # Define hub accounts
+    declare -A hub_accounts=(
+        ["RSCM"]="${AWS_PROFILE_HUB01_EMAIL}"
+        ["RSPON"]="${AWS_PROFILE_HUB02_EMAIL}"
+        ["SARDJITO"]="${AWS_PROFILE_HUB03_EMAIL}"
+        ["RSNGOERAH"]="${AWS_PROFILE_HUB04_EMAIL}"
+        ["RSJPD"]="${AWS_PROFILE_HUB05_EMAIL}"
+    )
+
+    for account_name in "${!hub_accounts[@]}"; do
+        local email="${hub_accounts[$account_name]}"
+        
+        if [[ -z "$email" ]]; then
+            log WARN "Email not set for $account_name, skipping..."
+            continue
+        fi
+
+        # Check if account already exists
+        local existing_account=$(aws organizations list-accounts \
+            --query "Accounts[?Name=='$account_name'].Id" \
+            --output text)
+
+        if [[ -n "$existing_account" ]]; then
+            log WARN "$account_name account already exists: $existing_account"
+            continue
+        fi
+
+        log INFO "Creating $account_name account with email: $email"
+
+        local account_result=$(aws organizations create-account \
+            --email "$email" \
+            --account-name "$account_name" \
+            --output json)
+
+        local create_request_id=$(echo $account_result | jq -r '.CreateAccountStatus.Id')
+        log INFO "Account creation request ID: $create_request_id"
+
+        # Wait for account creation
+        local account_id=""
+        for i in {1..60}; do
+            sleep 10
+            local status=$(aws organizations describe-create-account-status \
+                --create-account-request-id "$create_request_id" \
+                --query 'CreateAccountStatus.State' \
+                --output text)
+
+            if [[ "$status" == "SUCCEEDED" ]]; then
+                account_id=$(aws organizations describe-create-account-status \
+                    --create-account-request-id "$create_request_id" \
+                    --query 'CreateAccountStatus.AccountId' \
+                    --output text)
+                log INFO "✓ $account_name account created: $account_id"
+                break
+            elif [[ "$status" == "FAILED" ]]; then
+                log ERROR "$account_name account creation failed"
+                break
+            fi
+        done
+
+        # Move account to Hub OU
+        if [[ -n "$account_id" && -n "$hub_ou" ]]; then
+            aws organizations move-account \
+                --account-id "$account_id" \
+                --source-parent-id "$root_id" \
+                --destination-parent-id "$hub_ou" 2>/dev/null || true
+            log INFO "✓ $account_name moved to Hub OU"
+        fi
+    done
+
+    log INFO "✓ Hub accounts creation completed"
+}
+
+create_uat_accounts() {
+    log INFO "Step 6: Creating UAT Accounts..."
+
+    local root_id=$(get_root_id)
+    local uat_ou=$(aws organizations list-organizational-units-for-parent \
+        --parent-id "$root_id" \
+        --query "OrganizationalUnits[?Name=='UAT'].Id" \
+        --output text)
+
+    # Define UAT accounts
+    declare -A uat_accounts=(
+        ["RSCM-UAT"]="${AWS_PROFILE_UAT01_EMAIL}"
+        ["RSPON-UAT"]="${AWS_PROFILE_UAT02_EMAIL}"
+        ["SARDJITO-UAT"]="${AWS_PROFILE_UAT03_EMAIL}"
+        ["RSNGOERAH-UAT"]="${AWS_PROFILE_UAT04_EMAIL}"
+        ["RSJPD-UAT"]="${AWS_PROFILE_UAT05_EMAIL}"
+    )
+
+    for account_name in "${!uat_accounts[@]}"; do
+        local email="${uat_accounts[$account_name]}"
+        
+        if [[ -z "$email" ]]; then
+            log WARN "Email not set for $account_name, skipping..."
+            continue
+        fi
+
+        # Check if account already exists
+        local existing_account=$(aws organizations list-accounts \
+            --query "Accounts[?Name=='$account_name'].Id" \
+            --output text)
+
+        if [[ -n "$existing_account" ]]; then
+            log WARN "$account_name account already exists: $existing_account"
+            continue
+        fi
+
+        log INFO "Creating $account_name account with email: $email"
+
+        local account_result=$(aws organizations create-account \
+            --email "$email" \
+            --account-name "$account_name" \
+            --output json)
+
+        local create_request_id=$(echo $account_result | jq -r '.CreateAccountStatus.Id')
+        log INFO "Account creation request ID: $create_request_id"
+
+        # Wait for account creation
+        local account_id=""
+        for i in {1..60}; do
+            sleep 10
+            local status=$(aws organizations describe-create-account-status \
+                --create-account-request-id "$create_request_id" \
+                --query 'CreateAccountStatus.State' \
+                --output text)
+
+            if [[ "$status" == "SUCCEEDED" ]]; then
+                account_id=$(aws organizations describe-create-account-status \
+                    --create-account-request-id "$create_request_id" \
+                    --query 'CreateAccountStatus.AccountId' \
+                    --output text)
+                log INFO "✓ $account_name account created: $account_id"
+                break
+            elif [[ "$status" == "FAILED" ]]; then
+                log ERROR "$account_name account creation failed"
+                break
+            fi
+        done
+
+        # Move account to UAT OU
+        if [[ -n "$account_id" && -n "$uat_ou" ]]; then
+            aws organizations move-account \
+                --account-id "$account_id" \
+                --source-parent-id "$root_id" \
+                --destination-parent-id "$uat_ou" 2>/dev/null || true
+            log INFO "✓ $account_name moved to UAT OU"
+        fi
+    done
+
+    log INFO "✓ UAT accounts creation completed"
+}
+
+################################################################################
 # Service Control Policies (SCPs)
 ################################################################################
 
 create_deny_root_scp() {
-    log INFO "Step 5: Creating Service Control Policies..."
+    log INFO "Step 7: Creating Service Control Policies..."
 
     # Create SCP to deny root user actions (except in emergencies)
     local scp_name="DenyRootUserActions"
@@ -519,7 +723,7 @@ EOF
 }
 
 attach_scps_to_ous() {
-    log INFO "Step 6: Attaching SCPs to Organizational Units..."
+    log INFO "Step 8: Attaching SCPs to Organizational Units..."
 
     local root_id=$(get_root_id)
 
@@ -573,7 +777,7 @@ attach_scps_to_ous() {
 ################################################################################
 
 setup_cloudtrail_organization_trail() {
-    log INFO "Step 7: Setting up CloudTrail Organization Trail..."
+    log INFO "Step 9: Setting up CloudTrail Organization Trail..."
 
     local management_account_id=$(aws sts get-caller-identity --query Account --output text)
     local trail_name="organization-trail"
@@ -689,7 +893,7 @@ EOF
 ################################################################################
 
 enable_aws_services() {
-    log INFO "Step 8: Enabling AWS Services for Organizations..."
+    log INFO "Step 10: Enabling AWS Services for Organizations..."
 
     local services=(
         "cloudtrail.amazonaws.com"
@@ -712,7 +916,7 @@ enable_aws_services() {
 ################################################################################
 
 generate_summary() {
-    log INFO "Step 9: Generating Landing Zone Summary..."
+    log INFO "Step 11: Generating Landing Zone Summary..."
 
     local management_account_id=$(aws sts get-caller-identity --query Account --output text)
     local org_id=$(aws organizations describe-organization --query 'Organization.Id' --output text)
@@ -876,6 +1080,9 @@ main() {
 
     local log_archive_id=$(create_log_archive_account)
     local security_audit_id=$(create_security_audit_account)
+
+    create_hub_accounts
+    create_uat_accounts
 
     create_deny_root_scp
     create_require_mfa_scp
