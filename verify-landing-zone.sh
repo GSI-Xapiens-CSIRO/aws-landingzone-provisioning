@@ -28,6 +28,17 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 SCRIPT_VERSION="2.0.0"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+# Create results directory structure
+RESULTS_DIR="${SCRIPT_DIR}/results"
+LOGS_DIR="${RESULTS_DIR}/logs"
+SUMMARY_DIR="${RESULTS_DIR}/summary"
+
+mkdir -p "${LOGS_DIR}" "${SUMMARY_DIR}"
+
+LOG_FILE="${LOGS_DIR}/verify-landing-zone-${TIMESTAMP}.log"
+
 CHECKS_PASSED=0
 CHECKS_FAILED=0
 CHECKS_WARNING=0
@@ -400,6 +411,32 @@ generate_report() {
     echo -e "${YELLOW}Warnings: ${CHECKS_WARNING}/${total}${NC}"
     echo ""
 
+    # Generate summary report file
+    cat > "${SUMMARY_DIR}/verification-report-${TIMESTAMP}.txt" <<EOF
+╔════════════════════════════════════════════════════════════════╗
+║                                                                ║
+║        AWS Landing Zone Verification Report                    ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
+
+Verification Date: $(date '+%Y-%m-%d %H:%M:%S')
+Script Version: ${SCRIPT_VERSION}
+
+════════════════════════════════════════════════════════════════
+
+VERIFICATION RESULTS
+════════════════════════════════════════════════════════════════
+Total Checks:    ${total}
+Passed:          ${CHECKS_PASSED}
+Failed:          ${CHECKS_FAILED}
+Warnings:        ${CHECKS_WARNING}
+
+════════════════════════════════════════════════════════════════
+EOF
+
+    echo "Verification report saved to: ${SUMMARY_DIR}/verification-report-${TIMESTAMP}.txt"
+    echo ""
+
     if [[ $CHECKS_FAILED -eq 0 ]]; then
         echo -e "${GREEN}✓ Landing Zone verification completed successfully!${NC}"
         if [[ $CHECKS_WARNING -gt 0 ]]; then
@@ -454,6 +491,8 @@ main() {
     echo ""
     echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo -e "${BLUE}Verification completed at $(date '+%Y-%m-%d %H:%M:%S')${NC}"
+    echo -e "${BLUE}Log file: ${LOG_FILE}${NC}"
+    echo -e "${BLUE}Report: ${SUMMARY_DIR}/verification-report-${TIMESTAMP}.txt${NC}"
     echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
 }

@@ -41,7 +41,17 @@ MAGENTA='\033[0;35m'
 NC='\033[0m'
 
 SCRIPT_VERSION="2.0.0"
-LOG_FILE="post-deployment-automation-$(date +%Y%m%d_%H%M%S).log"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+# Create results directory structure
+RESULTS_DIR="${SCRIPT_DIR}/results"
+LOGS_DIR="${RESULTS_DIR}/logs"
+SUMMARY_DIR="${RESULTS_DIR}/summary"
+AUTOMATION_DIR="${RESULTS_DIR}/automation"
+
+mkdir -p "${LOGS_DIR}" "${SUMMARY_DIR}" "${AUTOMATION_DIR}"
+
+LOG_FILE="${LOGS_DIR}/post-deployment-automation-${TIMESTAMP}.log"
 AWS_REGION="${AWS_REGION:-ap-southeast-3}"
 
 # Get account IDs
@@ -176,7 +186,7 @@ configure_mfa_guide() {
 
     log STEP "Generating MFA configuration guide..."
 
-    cat > "mfa-configuration-guide.txt" <<EOF
+    cat > "${AUTOMATION_DIR}/mfa-configuration-guide.txt" <<EOF
 ╔════════════════════════════════════════════════════════════════╗
 ║                                                                ║
 ║              MFA Configuration Guide for Root Users            ║
@@ -260,12 +270,12 @@ After enabling MFA on all accounts, proceed to Step 2.
 ═══════════════════════════════════════════════════════════════
 EOF
 
-    log SUCCESS "MFA configuration guide created: mfa-configuration-guide.txt"
+    log SUCCESS "MFA configuration guide created: ${AUTOMATION_DIR}/mfa-configuration-guide.txt"
 
     echo ""
     log WARN "⚠️  MANUAL ACTION REQUIRED ⚠️"
     log WARN "Please enable MFA on all root accounts before proceeding"
-    log WARN "Guide saved to: mfa-configuration-guide.txt"
+    log WARN "Guide saved to: ${AUTOMATION_DIR}/mfa-configuration-guide.txt"
     echo ""
 
     read -p "Press ENTER after you've enabled MFA on all accounts to continue..."
@@ -326,7 +336,7 @@ setup_iam_identity_center() {
 
     log SUCCESS "Default permission sets created"
 
-    cat > "iam-identity-center-setup.txt" <<EOF
+    cat > "${AUTOMATION_DIR}/iam-identity-center-setup.txt" <<EOF
 ╔════════════════════════════════════════════════════════════════╗
 ║                                                                ║
 ║           IAM Identity Center Configuration Guide              ║
@@ -371,7 +381,7 @@ You can create additional custom permission sets as needed.
 ═══════════════════════════════════════════════════════════════
 EOF
 
-    log SUCCESS "IAM Identity Center setup guide created: iam-identity-center-setup.txt"
+    log SUCCESS "IAM Identity Center setup guide created: ${AUTOMATION_DIR}/iam-identity-center-setup.txt"
 }
 
 ################################################################################
@@ -989,7 +999,7 @@ EOF
 
     log SUCCESS "Tagging strategy implemented"
 
-    cat > "tagging-strategy-guide.txt" <<EOF
+    cat > "${AUTOMATION_DIR}/tagging-strategy-guide.txt" <<EOF
 ╔════════════════════════════════════════════════════════════════╗
 ║                                                                ║
 ║              Organization Tagging Strategy                     ║
@@ -1059,7 +1069,7 @@ Enable cost allocation tags in AWS Billing:
 ═══════════════════════════════════════════════════════════════
 EOF
 
-    log SUCCESS "Tagging strategy guide created: tagging-strategy-guide.txt"
+    log SUCCESS "Tagging strategy guide created: ${AUTOMATION_DIR}/tagging-strategy-guide.txt"
 }
 
 ################################################################################
@@ -1069,7 +1079,7 @@ EOF
 generate_summary_report() {
     log INFO "Generating summary report..."
 
-    cat > "post-deployment-summary-$(date +%Y%m%d_%H%M%S).txt" <<EOF
+    cat > "${SUMMARY_DIR}/post-deployment-summary-${TIMESTAMP}.txt" <<EOF
 ╔════════════════════════════════════════════════════════════════╗
 ║                                                                ║
 ║       Post-Deployment Automation Summary Report                ║
@@ -1238,10 +1248,10 @@ main() {
     log SUCCESS "═══════════════════════════════════════════════════════"
     echo ""
     log INFO "Generated documents:"
-    log INFO "  • mfa-configuration-guide.txt"
-    log INFO "  • iam-identity-center-setup.txt"
-    log INFO "  • tagging-strategy-guide.txt"
-    log INFO "  • post-deployment-summary-*.txt"
+    log INFO "  • ${AUTOMATION_DIR}/mfa-configuration-guide.txt"
+    log INFO "  • ${AUTOMATION_DIR}/iam-identity-center-setup.txt"
+    log INFO "  • ${AUTOMATION_DIR}/tagging-strategy-guide.txt"
+    log INFO "  • ${SUMMARY_DIR}/post-deployment-summary-${TIMESTAMP}.txt"
     log INFO "  • $LOG_FILE"
     echo ""
     log WARN "⚠️  Don't forget to complete MFA setup on all root accounts!"

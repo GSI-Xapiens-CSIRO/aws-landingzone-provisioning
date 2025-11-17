@@ -34,7 +34,16 @@ NC='\033[0m' # No Color
 
 # Configuration
 SCRIPT_VERSION="2.0.0"
-LOG_FILE="landing-zone-provisioning-$(date +%Y%m%d_%H%M%S).log"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+# Create results directory structure
+RESULTS_DIR="${SCRIPT_DIR}/results"
+LOGS_DIR="${RESULTS_DIR}/logs"
+SUMMARY_DIR="${RESULTS_DIR}/summary"
+
+mkdir -p "${LOGS_DIR}" "${SUMMARY_DIR}"
+
+LOG_FILE="${LOGS_DIR}/landing-zone-provisioning-${TIMESTAMP}.log"
 ORG_NAME="$ORG_NAME"
 AWS_REGION="${AWS_REGION:-ap-southeast-3}"
 
@@ -931,7 +940,7 @@ generate_summary() {
         --output text)
 
     # Generate summary report
-    local summary_file="landing-zone-summary-$(date +%Y%m%d_%H%M%S).txt"
+    local summary_file="${SUMMARY_DIR}/landing-zone-summary-${TIMESTAMP}.txt"
 
     cat > "$summary_file" <<EOF
 ╔════════════════════════════════════════════════════════════════╗
